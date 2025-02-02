@@ -1,13 +1,10 @@
-import base64
 import demucs.separate
 import demucs.api
-import torch
 import subprocess
 import ffmpeg
 import io
 import sys
-import os    
-    #your_code = base64.b64encode(b"""
+import os
 import sys
 import yt_dlp
 
@@ -20,10 +17,10 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtGui import QIcon
 from PyQt6.QtCore import QThread, pyqtSignal
 from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
+
 from selenium.webdriver.chrome.options import Options
 import time
-import sys
+
 
 old_stdout = sys.stdout
 sys.stdout = buffer = io.StringIO()
@@ -98,7 +95,7 @@ class YouTubeDownloader(QWidget):
 
         self.url_input = QLineEdit(self)
         layout.addWidget(self.url_input)
-        self.url_input.setText("https://www.youtube.com/watch?v=1VQ_3sBZEm0")
+
         self.url_input.returnPressed.connect(self.open_youtube)
         
         self.format_label = QLabel("Select Format:")
@@ -206,27 +203,21 @@ class YouTubeDownloader(QWidget):
         if not url:
             QMessageBox.warning(self, "Error", "Please enter a YouTube URL.")
             return
-
         
-
-
-
-        self.progress_bar.setValue(0)
-
-        
+        self.progress_bar.setValue(0)        
         self.download_thread = DownloadThread(url, format_selected, quality_selected, self.save_path)
         self.download_thread.progress_signal.connect(self.update_progress)
         self.download_thread.finished_signal.connect(self.download_complete)
         self.download_thread.start()
 
+    # Updates download progress bar
     def update_progress(self, value):
         self.progress_bar.setValue(value)
-
 
     # Returns model names from dropdown selection. (model, args)
     def convert_stems(self):
         stem = self.stem_options_dropdown.currentText()
-        model = None
+        
         match stem:
             case "Vocals Only":
                 return ("htdemucs",("--two-stems","vocals"))
@@ -235,10 +226,8 @@ class YouTubeDownloader(QWidget):
             case "6 Stem Split":
                 return ("htdemucs_6s",None)           
 
-    
-    def download_complete(self, success, message, file_path):
-        
-        
+    # Called when the download thread finishes
+    def download_complete(self, success, message, file_path):       
         if success:
             if self.split_stems_checkbox.isChecked():
                 print(file_path)
@@ -259,9 +248,21 @@ class YouTubeDownloader(QWidget):
                     format = file_path.split(".")[-1]
                     ffmpeg.input(file_path).output(file_path.replace("."+ format, ".wav")).run()
                     file_path = file_path.replace("."+ format, ".wav")
-                st = self.convert_stems()[0]
+                st = self.convert_stems()
                 print(file_path)
-                demucs.separate.main(["-n", st, file_path])
+                directory = file_path.split("\\")
+                
+                dir = ""
+                for d in directory:
+                    dir += d + "\\"
+                dir = dir[:-2]
+                if '.' not in file_path:
+                    file_path += ".wav"
+                
+                if st[1]:
+                    demucs.separate.main(["--two-stems", "vocals", "-n", st[0], "-o", temp, file_path])
+                else:
+                    demucs.separate.main(["-n", st[0], "-o", temp, file_path])
                 
         else:
             QMessageBox.critical(self, "Error", message)
@@ -289,5 +290,5 @@ if __name__ == "__main__":
     window.show()
     sys.exit(app.exec())
 
-#    exec(base64.b64decode(your_code))
+
 
