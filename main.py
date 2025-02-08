@@ -55,6 +55,8 @@ class MainGUI(QWidget):
         layout.addWidget(self.save_button)
 
         self.save_path = ""
+        self.save_label = QLabel("Save Location: None")
+        layout.addWidget(self.save_label)
 
         self.split_stems_checkbox = QCheckBox("Split Stems?", self)
         self.split_stems_checkbox.stateChanged.connect(self.toggle_stem_options)
@@ -66,7 +68,8 @@ class MainGUI(QWidget):
         layout.addWidget(self.stem_options_dropdown)
         
         self.progress_bar = QProgressBar(self)
-        self.progress_bar.setValue(0)
+        self.progress_bar.setRange(0,0)
+        self.progress_bar.hide()
         layout.addWidget(self.progress_bar)
 
         
@@ -102,20 +105,26 @@ class MainGUI(QWidget):
         if ".com" in self.url_input.text():
             self.ytd = YoutubeDownloader.YoutubeDownloader(f"https://youtube.com?q={self.url_input.text().replace(' ', '+')}")
         else:
-            self.ytd = YoutubeDownloader.YoutubeDownloader("https://youtube.com")
-        
+            self.ytd = YoutubeDownloader.YoutubeDownloader("https://youtube.com")        
         self.ytd.finished.connect(self.set_url)
         self.ytd.start()
         
-
+    def toggle_loading(self):
+        if self.progress_bar.isVisible():
+            self.progress_bar.hide()
+        else:
+            self.progress_bar.show()
+            
     
     def select_save_location(self):
         folder = QFileDialog.getExistingDirectory(self, "Select Download Folder")
         if folder:
             self.save_path = folder
+            self.save_label.setText(f"Save Location: {folder}")
 
     # Callback function for download button.
     def download_video(self):
+        self.progress_bar.show()
         url = self.url_input.text()
         format_selected = self.format_dropdown.currentText().split(" - ")[1].lower()
         self.format = format_selected
@@ -124,7 +133,7 @@ class MainGUI(QWidget):
             QMessageBox.warning(self, "Error", "Please enter a valid URL.")
             return
         
-        self.progress_bar.setValue(0)        
+              
         self.download_thread = Downloader.DownloadThread(url, format_selected, quality_selected, self.save_path.replace("/", "\\"))
         self.download_thread.finished_signal.connect(self.download_complete)        
         self.download_thread.start()
@@ -150,6 +159,7 @@ class MainGUI(QWidget):
     def split_complete(self, message):
         print(message)
         self.splitter.quit()
+        self.progress_bar.hide()
 
     # Called when the download thread finishes
     def download_complete(self, success, message, file_path):
@@ -160,6 +170,9 @@ class MainGUI(QWidget):
                 self.splitter.start()
                 self.filepath = file_path
                 print(self.filepath)
+                
+        else:
+            self.progress_bar.hide()
         print(message)
 
         
